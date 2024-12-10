@@ -103,25 +103,27 @@ const TeamSearch = ({ onSelect, excludeTeams = [] }) => {
       </div>
 
       {showSuggestions && searchTerm && (
-        <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-auto border border-gray-200">
-          {filteredTeams.length > 0 ? (
-            filteredTeams.map((team, index) => (
-              <div
-                key={team}
-                className={`px-4 py-2 cursor-pointer ${
-                  index === selectedIndex ? 'bg-blue-100' : 'hover:bg-gray-100'
-                }`}
-                onClick={() => handleSelect(team)}
-                onMouseEnter={() => setSelectedIndex(index)}
-              >
-                {team}
-              </div>
-            ))
-          ) : (
-            <div className="px-4 py-2 text-gray-500">No teams found</div>
-          )}
+  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 rounded-md shadow-lg max-h-60 overflow-auto border border-gray-200 dark:border-gray-700">
+    {filteredTeams.length > 0 ? (
+      filteredTeams.map((team, index) => (
+        <div
+          key={team}
+          className={`px-4 py-2 cursor-pointer ${
+            index === selectedIndex 
+              ? 'bg-blue-100 dark:bg-gray-700' 
+              : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+          onClick={() => handleSelect(team)}
+          onMouseEnter={() => setSelectedIndex(index)}
+        >
+          {team}
         </div>
-      )}
+      ))
+    ) : (
+      <div className="px-4 py-2 text-gray-500 dark:text-gray-400">No teams found</div>
+    )}
+  </div>
+)}
     </div>
   );
 };
@@ -241,25 +243,25 @@ const NBAConnectionGame = () => {
         <CardContent>
           {/* Active Player Strikes */}
           {Object.keys(gameState.playerStrikes).length > 0 && (
-            <div className="mb-4 bg-gray-100 p-2 rounded max-h-40 overflow-y-auto">
-              <strong>Player Strikes:</strong>
-              {Object.entries(gameState.playerStrikes)
-                .sort((a, b) => b[1] - a[1])
-                .map(([player, strikes]) => (
-                  <div key={player} className="flex items-center justify-between">
-                    <span className="mr-2">{player}</span>
-                    <div className="flex">
-                      {[...Array(strikes)].map((_, i) => (
-                        <Star key={i} className="text-red-500 fill-red-500" size={16} />
-                      ))}
-                      {[...Array(3 - strikes)].map((_, i) => (
-                        <Star key={i} className="text-gray-300" size={16} />
-                      ))}
-                    </div>
+          <div className="mb-4 bg-gray-100 dark:bg-gray-800 p-2 rounded max-h-40 overflow-y-auto">
+            <strong>Player Strikes:</strong>
+            {Object.entries(gameState.playerStrikes)
+              .sort((a, b) => b[1] - a[1])
+              .map(([player, strikes]) => (
+                <div key={player} className="flex items-center justify-between">
+                  <span className="mr-2">{player}</span>
+                  <div className="flex">
+                    {[...Array(strikes)].map((_, i) => (
+                      <Star key={i} className="text-red-500 fill-red-500" size={16} />
+                    ))}
+                    {[...Array(3 - strikes)].map((_, i) => (
+                      <Star key={i} className="text-gray-300 dark:text-gray-600" size={16} />
+                    ))}
                   </div>
-                ))}
-            </div>
-          )}
+                </div>
+              ))}
+          </div>
+        )}
 
           {/* Timer and Turn Info */}
           {!gameState.gameOver && gameState.previousTeams.length > 0 && (
@@ -276,7 +278,7 @@ const NBAConnectionGame = () => {
 
           {/* Current Connections */}
           {gameState.currentConnections && !gameState.gameOver && (
-            <div className="bg-blue-100 p-2 rounded mb-4">
+            <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded mb-4">
               <div className="font-bold mb-2">Common Players:</div>
               {gameState.currentConnections.map((connection, index) => (
                 <div key={index} className="flex items-center justify-between mb-1">
@@ -286,13 +288,13 @@ const NBAConnectionGame = () => {
                       <Star key={i} className="text-yellow-500 fill-yellow-500" size={16} />
                     ))}
                     {[...Array(3 - connection.strikes)].map((_, i) => (
-                      <Star key={i} className="text-gray-300" size={16} />
+                      <Star key={i} className="text-gray-300 dark:text-gray-600" size={16} />
                     ))}
                   </div>
                 </div>
               ))}
             </div>
-          )}
+          )}    
 
           {/* Team History */}
           {gameState.previousTeams.length > 0 && (
@@ -321,7 +323,7 @@ const NBAConnectionGame = () => {
               <p className="text-xl font-bold mb-4">
                 {gameState.message}
               </p>
-              <div className="bg-gray-100 p-2 rounded mb-4">
+              <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded mb-4">
                 <strong>Rounds Played:</strong> {gameState.roundCount}
                 <br />
                 <strong>Teams Used:</strong> {gameState.previousTeams.join(', ')}
