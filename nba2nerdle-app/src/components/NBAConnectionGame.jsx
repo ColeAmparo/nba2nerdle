@@ -13,11 +13,33 @@ const TeamSearch = ({ onSelect, excludeTeams = [] }) => {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const searchRef = useRef(null);
 
+  // Helper function to get the starting year from a team key
+  const getStartYear = (teamKey) => {
+    const yearMatch = teamKey.match(/^\d{4}/);
+    return yearMatch ? parseInt(yearMatch[0]) : 0;
+  };
+
   const filteredTeams = Object.keys(nbaRosters)
     .filter(team => !excludeTeams.includes(team))
     .filter(team => 
       team.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    )
+    .sort((a, b) => {
+      // If search term is a year, prioritize teams that start with that year
+      if (/^\d{4}$/.test(searchTerm)) {
+        const yearA = getStartYear(a);
+        const yearB = getStartYear(b);
+        const searchYear = parseInt(searchTerm);
+        
+        // If one team starts with the search year and the other doesn't,
+        // prioritize the one that does
+        if (yearA === searchYear && yearB !== searchYear) return -1;
+        if (yearB === searchYear && yearA !== searchYear) return 1;
+      }
+      
+      // Otherwise, sort by year (newest first)
+      return getStartYear(b) - getStartYear(a);
+    });
 
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
@@ -74,7 +96,7 @@ const TeamSearch = ({ onSelect, excludeTeams = [] }) => {
           }}
           onFocus={() => setShowSuggestions(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Search for a team (e.g., '2022 Warriors')"
+          placeholder="Search for a team (e.g., '2021 - 2022 Warriors')"
           className="pr-10"
         />
         <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
