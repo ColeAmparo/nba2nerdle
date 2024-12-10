@@ -1,17 +1,16 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
 import NBAConnectionGame from './components/NBAConnectionGame'
-
+import { ThemeToggle } from './components/ThemeToggle'
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-      <div className="min-h-screen bg-gray-100 p-4">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto p-4">
+        <div className="flex justify-end mb-4">
+          <ThemeToggle />
+        </div>
         <NBAConnectionGame />
       </div>
+    </div>
   )
 }
 
