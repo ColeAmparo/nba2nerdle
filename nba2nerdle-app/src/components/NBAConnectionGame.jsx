@@ -1,11 +1,9 @@
-// NBAConnectionGame.js
 import React, { useState, useEffect, useRef } from 'react';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Clock, Star, Search } from 'lucide-react';
 import { nbaRosters } from '../data/nbaRosters';
-
 
 const TeamSearch = ({ onSelect, excludeTeams = [] }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -13,31 +11,27 @@ const TeamSearch = ({ onSelect, excludeTeams = [] }) => {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const searchRef = useRef(null);
 
-  // Helper function to get the starting year from a team key
   const getStartYear = (teamKey) => {
     const yearMatch = teamKey.match(/^\d{4}/);
     return yearMatch ? parseInt(yearMatch[0]) : 0;
   };
 
   const filteredTeams = Object.keys(nbaRosters)
-    .filter(team => !excludeTeams.includes(team))
-    .filter(team => 
-      team.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter(team => {
+      // Only exclude already used teams
+      if (excludeTeams.includes(team)) return false;
+      // Filter based on search term
+      return team.toLowerCase().includes(searchTerm.toLowerCase());
+    })
     .sort((a, b) => {
-      // If search term is a year, prioritize teams that start with that year
       if (/^\d{4}$/.test(searchTerm)) {
         const yearA = getStartYear(a);
         const yearB = getStartYear(b);
         const searchYear = parseInt(searchTerm);
         
-        // If one team starts with the search year and the other doesn't,
-        // prioritize the one that does
         if (yearA === searchYear && yearB !== searchYear) return -1;
         if (yearB === searchYear && yearA !== searchYear) return 1;
       }
-      
-      // Otherwise, sort by year (newest first)
       return getStartYear(b) - getStartYear(a);
     });
 
@@ -103,33 +97,34 @@ const TeamSearch = ({ onSelect, excludeTeams = [] }) => {
       </div>
 
       {showSuggestions && searchTerm && (
-  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 rounded-md shadow-lg max-h-60 overflow-auto border border-gray-200 dark:border-gray-700">
-    {filteredTeams.length > 0 ? (
-      filteredTeams.map((team, index) => (
-        <div
-          key={team}
-          className={`px-4 py-2 cursor-pointer ${
-            index === selectedIndex 
-              ? 'bg-blue-100 dark:bg-gray-700' 
-              : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-          }`}
-          onClick={() => handleSelect(team)}
-          onMouseEnter={() => setSelectedIndex(index)}
-        >
-          {team}
+        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 rounded-md shadow-lg max-h-60 overflow-auto border border-gray-200 dark:border-gray-700">
+          {filteredTeams.length > 0 ? (
+            filteredTeams.map((team, index) => (
+              <div
+                key={team}
+                className={`px-4 py-2 cursor-pointer ${
+                  index === selectedIndex 
+                    ? 'bg-blue-100 dark:bg-gray-700' 
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+                onClick={() => handleSelect(team)}
+                onMouseEnter={() => setSelectedIndex(index)}
+              >
+                {team}
+              </div>
+            ))
+          ) : (
+            <div className="px-4 py-2 text-gray-500 dark:text-gray-400">No teams found</div>
+          )}
         </div>
-      ))
-    ) : (
-      <div className="px-4 py-2 text-gray-500 dark:text-gray-400">No teams found</div>
-    )}
-  </div>
-)}
+      )}
     </div>
   );
 };
 
 const NBAConnectionGame = () => {
   const [timeRemaining, setTimeRemaining] = useState(30);
+  const [errorMessage, setErrorMessage] = useState('');
   const [gameState, setGameState] = useState({
     currentPlayer: 1,
     previousTeams: [],
@@ -162,6 +157,19 @@ const NBAConnectionGame = () => {
     return () => clearInterval(timerId);
   }, [gameState.gameOver, gameState.previousTeams, gameState.currentPlayer]);
 
+  const showError = (message) => {
+    setErrorMessage(message);
+    setTimeout(() => setErrorMessage(''), 3000);
+  };
+
+  const getFranchise = (teamKey) => {
+    const parts = teamKey.split(' - ');
+    if (parts.length > 1) {
+      return parts[1].split(' ').slice(1).join(' '); // Get just the team name, without the year
+    }
+    return teamKey.split(' ').slice(2).join(' '); // Fallback
+  };
+
   const findCommonPlayers = (team1, team2) => {
     if (!nbaRosters[team1] || !nbaRosters[team2]) return [];
     const common = nbaRosters[team1].filter(player => nbaRosters[team2].includes(player));
@@ -172,6 +180,19 @@ const NBAConnectionGame = () => {
   };
 
   const handleTeamSubmit = (selectedTeam) => {
+    // Check for same franchise
+    if (gameState.previousTeams.length > 0) {
+      const previousTeam = gameState.previousTeams[gameState.previousTeams.length - 1];
+      const previousFranchise = getFranchise(previousTeam);
+      const currentFranchise = getFranchise(selectedTeam);
+      
+      if (previousFranchise === currentFranchise) {
+        showError(`Cannot select ${currentFranchise} - same franchise as previous team`);
+        return;
+      }
+    }
+
+    // First round handling
     if (gameState.previousTeams.length === 0) {
       setGameState(prev => ({
         ...prev,
@@ -185,43 +206,47 @@ const NBAConnectionGame = () => {
       return;
     }
 
+    // Find common players
     const lastTeam = gameState.previousTeams[gameState.previousTeams.length - 1];
     const commonPlayers = findCommonPlayers(lastTeam, selectedTeam);
-    const usableCommonPlayers = commonPlayers.filter(player => player.strikes < 3);
 
-    if (usableCommonPlayers.length > 0) {
-      const updatedStrikes = { ...gameState.playerStrikes };
-      usableCommonPlayers.forEach(player => {
-        updatedStrikes[player.name] = (updatedStrikes[player.name] || 0) + 1;
-      });
-
-      setGameState(prev => ({
-        ...prev,
-        previousTeams: [...prev.previousTeams, selectedTeam],
-        currentPlayer: prev.currentPlayer === 1 ? 2 : 1,
-        message: `Player ${prev.currentPlayer === 1 ? 2 : 1}: Choose a team with common players`,
-        roundCount: prev.roundCount + 1,
-        currentConnections: usableCommonPlayers.map(player => ({
-          ...player,
-          strikes: updatedStrikes[player.name]
-        })),
-        playerStrikes: updatedStrikes
-      }));
-      setTimeRemaining(30);
-    } else {
-      setGameState(prev => ({
-        ...prev,
-        gameOver: true,
-        winner: prev.currentPlayer === 1 ? 2 : 1,
-        message: commonPlayers.length === 0 
-          ? `Player ${prev.currentPlayer} loses! No common players found.`
-          : `Player ${prev.currentPlayer} loses! All common players have 3 strikes.`
-      }));
+    // Check if there are any common players
+    if (commonPlayers.length === 0) {
+      showError('Invalid selection: No common players between teams');
+      return;
     }
+
+    // Check for players with 3 strikes
+    const usableCommonPlayers = commonPlayers.filter(player => player.strikes < 3);
+    if (usableCommonPlayers.length === 0) {
+      showError('Invalid selection: All common players have reached 3 strikes');
+      return;
+    }
+
+    // Valid move - update game state
+    const updatedStrikes = { ...gameState.playerStrikes };
+    usableCommonPlayers.forEach(player => {
+      updatedStrikes[player.name] = (updatedStrikes[player.name] || 0) + 1;
+    });
+
+    setGameState(prev => ({
+      ...prev,
+      previousTeams: [...prev.previousTeams, selectedTeam],
+      currentPlayer: prev.currentPlayer === 1 ? 2 : 1,
+      message: `Player ${prev.currentPlayer === 1 ? 2 : 1}: Choose a team with common players`,
+      roundCount: prev.roundCount + 1,
+      currentConnections: usableCommonPlayers.map(player => ({
+        ...player,
+        strikes: updatedStrikes[player.name]
+      })),
+      playerStrikes: updatedStrikes
+    }));
+    setTimeRemaining(30);
   };
 
   const resetGame = () => {
     setTimeRemaining(30);
+    setErrorMessage('');
     setGameState({
       currentPlayer: 1,
       previousTeams: [],
@@ -241,27 +266,34 @@ const NBAConnectionGame = () => {
           <CardTitle>NBA Roster Connection Game</CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Error Message */}
+          {errorMessage && (
+            <div className="mb-4 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-100 px-4 py-2 rounded">
+              {errorMessage}
+            </div>
+          )}
+
           {/* Active Player Strikes */}
           {Object.keys(gameState.playerStrikes).length > 0 && (
-          <div className="mb-4 bg-gray-100 dark:bg-gray-800 p-2 rounded max-h-40 overflow-y-auto">
-            <strong>Player Strikes:</strong>
-            {Object.entries(gameState.playerStrikes)
-              .sort((a, b) => b[1] - a[1])
-              .map(([player, strikes]) => (
-                <div key={player} className="flex items-center justify-between">
-                  <span className="mr-2">{player}</span>
-                  <div className="flex">
-                    {[...Array(strikes)].map((_, i) => (
-                      <Star key={i} className="text-red-500 fill-red-500" size={16} />
-                    ))}
-                    {[...Array(3 - strikes)].map((_, i) => (
-                      <Star key={i} className="text-gray-300 dark:text-gray-600" size={16} />
-                    ))}
+            <div className="mb-4 bg-gray-100 dark:bg-gray-800 p-2 rounded max-h-40 overflow-y-auto">
+              <strong>Player Strikes:</strong>
+              {Object.entries(gameState.playerStrikes)
+                .sort((a, b) => b[1] - a[1])
+                .map(([player, strikes]) => (
+                  <div key={player} className="flex items-center justify-between">
+                    <span className="mr-2">{player}</span>
+                    <div className="flex">
+                      {[...Array(strikes)].map((_, i) => (
+                        <Star key={i} className="text-red-500 fill-red-500" size={16} />
+                      ))}
+                      {[...Array(3 - strikes)].map((_, i) => (
+                        <Star key={i} className="text-gray-300 dark:text-gray-600" size={16} />
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
-          </div>
-        )}
+                ))}
+            </div>
+          )}
 
           {/* Timer and Turn Info */}
           {!gameState.gameOver && gameState.previousTeams.length > 0 && (
@@ -294,7 +326,7 @@ const NBAConnectionGame = () => {
                 </div>
               ))}
             </div>
-          )}    
+          )}
 
           {/* Team History */}
           {gameState.previousTeams.length > 0 && (
