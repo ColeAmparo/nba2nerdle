@@ -1,126 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Input } from "@/components/ui/input";
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Star, Search } from 'lucide-react';
+import { Clock, Star } from 'lucide-react';
 import { nbaRosters } from '../data/nbaRosters';
-
-const TeamSearch = ({ onSelect, excludeTeams = [] }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(-1);
-  const searchRef = useRef(null);
-
-  const getStartYear = (teamKey) => {
-    const yearMatch = teamKey.match(/^\d{4}/);
-    return yearMatch ? parseInt(yearMatch[0]) : 0;
-  };
-
-  const filteredTeams = Object.keys(nbaRosters)
-    .filter(team => {
-      // Only exclude already used teams
-      if (excludeTeams.includes(team)) return false;
-      // Filter based on search term
-      return team.toLowerCase().includes(searchTerm.toLowerCase());
-    })
-    .sort((a, b) => {
-      if (/^\d{4}$/.test(searchTerm)) {
-        const yearA = getStartYear(a);
-        const yearB = getStartYear(b);
-        const searchYear = parseInt(searchTerm);
-        
-        if (yearA === searchYear && yearB !== searchYear) return -1;
-        if (yearB === searchYear && yearA !== searchYear) return 1;
-      }
-      return getStartYear(b) - getStartYear(a);
-    });
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelectedIndex(prev => 
-        prev < filteredTeams.length - 1 ? prev + 1 : prev
-      );
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelectedIndex(prev => prev > 0 ? prev - 1 : 0);
-    } else if (e.key === 'Enter' && selectedIndex >= 0) {
-      e.preventDefault();
-      const selectedTeam = filteredTeams[selectedIndex];
-      if (selectedTeam) {
-        onSelect(selectedTeam);
-        setSearchTerm('');
-        setShowSuggestions(false);
-        setSelectedIndex(-1);
-      }
-    } else if (e.key === 'Escape') {
-      setShowSuggestions(false);
-      setSelectedIndex(-1);
-    }
-  };
-
-  const handleSelect = (team) => {
-    onSelect(team);
-    setSearchTerm('');
-    setShowSuggestions(false);
-    setSelectedIndex(-1);
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
-        setShowSuggestions(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  return (
-    <div className="relative" ref={searchRef}>
-      <div className="relative">
-        <Input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setShowSuggestions(true);
-            setSelectedIndex(-1);
-          }}
-          onFocus={() => setShowSuggestions(true)}
-          onKeyDown={handleKeyDown}
-          placeholder="Search for a team (e.g., '2021 - 2022 Warriors')"
-          className="pr-10"
-        />
-        <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-      </div>
-
-      {showSuggestions && searchTerm && (
-        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 rounded-md shadow-lg max-h-60 overflow-auto border border-gray-200 dark:border-gray-700">
-          {filteredTeams.length > 0 ? (
-            filteredTeams.map((team, index) => (
-              <div
-                key={team}
-                className={`px-4 py-2 cursor-pointer ${
-                  index === selectedIndex 
-                    ? 'bg-blue-100 dark:bg-gray-700' 
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
-                onClick={() => handleSelect(team)}
-                onMouseEnter={() => setSelectedIndex(index)}
-              >
-                {team}
-              </div>
-            ))
-          ) : (
-            <div className="px-4 py-2 text-gray-500 dark:text-gray-400">No teams found</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
+import TeamSearch from './TeamSearch';
 
 const NBAConnectionGame = () => {
   const [timeRemaining, setTimeRemaining] = useState(30);
@@ -266,14 +149,12 @@ const NBAConnectionGame = () => {
           <CardTitle>NBA Roster Connection Game</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Error Message */}
           {errorMessage && (
             <div className="mb-4 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-100 px-4 py-2 rounded">
               {errorMessage}
             </div>
           )}
 
-          {/* Active Player Strikes */}
           {Object.keys(gameState.playerStrikes).length > 0 && (
             <div className="mb-4 bg-gray-100 dark:bg-gray-800 p-2 rounded max-h-40 overflow-y-auto">
               <strong>Player Strikes:</strong>
@@ -295,7 +176,6 @@ const NBAConnectionGame = () => {
             </div>
           )}
 
-          {/* Timer and Turn Info */}
           {!gameState.gameOver && gameState.previousTeams.length > 0 && (
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center">
@@ -308,7 +188,6 @@ const NBAConnectionGame = () => {
             </div>
           )}
 
-          {/* Current Connections */}
           {gameState.currentConnections && !gameState.gameOver && (
             <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded mb-4">
               <div className="font-bold mb-2">Common Players:</div>
@@ -328,7 +207,6 @@ const NBAConnectionGame = () => {
             </div>
           )}
 
-          {/* Team History */}
           {gameState.previousTeams.length > 0 && (
             <div className="mb-4">
               <p className="font-bold">Team History:</p>
@@ -336,12 +214,10 @@ const NBAConnectionGame = () => {
             </div>
           )}
 
-          {/* Game Message */}
           <div className="mb-4 text-center font-semibold">
             {gameState.message}
           </div>
 
-          {/* Game Controls */}
           {!gameState.gameOver && (
             <TeamSearch 
               onSelect={handleTeamSubmit}
@@ -349,7 +225,6 @@ const NBAConnectionGame = () => {
             />
           )}
 
-          {/* Game Over Screen */}
           {gameState.gameOver && (
             <div className="text-center">
               <p className="text-xl font-bold mb-4">
